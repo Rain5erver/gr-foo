@@ -75,6 +75,35 @@ namespace foo {
 	};
 	#pragma pack(pop)
 
+	#pragma pack(push, 1)
+	// An 802.15.4 TAP header as defined in https://gitlab.com/exegin/ieee802-15-4-tap/
+	struct tap_hdr {
+		uint8_t version;
+		uint8_t reserved;
+		uint16_t length;
+	};
+	#pragma pack(pop)
+
+
+	#pragma pack(push, 1)
+	struct tap_tlv_fcs {
+		uint16_t type; // FCS_TYPE = 0
+		uint16_t length; // 1
+		uint8_t fcs_type; // 0 = None, 1 = 16-bit CRC, 2 = 32-bit CRC
+		uint8_t padding[3]; // Should be 0 padded
+	};
+	#pragma pack(pop)
+
+	#pragma pack(push, 1)
+	struct tap_tlv_channel {
+		uint16_t type; // CHANNEL_ASSIGNMENT = 3
+		uint16_t length; // 3
+		uint16_t channel_number;
+		uint8_t channel_page;
+		uint8_t padding; // Should be 0 padded
+	};
+	#pragma pack(pop)
+
 }  // namespace foo
 }  // namespace gr
 

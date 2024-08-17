@@ -16,6 +16,7 @@
  */
 #include "wireshark_connector_impl.h"
 #include <foo/wireshark_connector.h>
+#include <pmt/pmt.h>
 #include <gnuradio/io_signature.h>
 #include <gnuradio/block_detail.h>
 
@@ -144,6 +145,58 @@ wireshark_connector_impl::handle_pdu(pmt::pmt_t pdu) {
 		offset += sizeof(pcap_hdr);
 		break;
 	}
+
+	case ZIGBEE_TAP:{
+
+		const size_t max_extra_size = sizeof(tap_hdr) + sizeof(tap_tlv_fcs) + sizeof(tap_tlv_channel);
+		size_t extra_size = sizeof(tap_hdr) + sizeof(tap_tlv_fcs);
+		d_msg = reinterpret_cast<char*>(std::malloc(len + sizeof(pcap_hdr) + max_extra_size));
+
+
+		pcap_hdr *hdr = reinterpret_cast<pcap_hdr*>(d_msg);
+		hdr->ts_sec   = ts_sec;
+		hdr->ts_usec  = ts_usec;
+		// hdr->incl_len is set at the end of the scope
+		// hdr->orig_len is set at the end of the scope
+		offset += sizeof(pcap_hdr);
+
+		tap_hdr *tap = reinterpret_cast<tap_hdr*>(d_msg + offset);
+		tap->version = 0;
+		tap->reserved = 0;
+		// tap->length is set at the end of the scope
+		offset += sizeof(tap_hdr);
+
+		tap_tlv_fcs *fcs = reinterpret_cast<tap_tlv_fcs*>(d_msg + offset);
+		fcs->type = 0; // FCS_TYPE
+		fcs->length = 1;
+		fcs->fcs_type = 1; // 16 bit crc
+		for (int i = 0; i < 3; i++) {
+			fcs->padding[i] = 0;
+		}
+		offset += sizeof(tap_tlv_fcs);
+
+
+		pmt::pmt_t dict = pmt::car(pdu);
+		if(pmt::dict_has_key(dict, pmt::mp("channel"))) {
+			pmt::pmt_t s = pmt::dict_ref(dict, pmt::mp("channel"), pmt::PMT_NIL);
+			if(pmt::is_integer(s)) {
+				tap_tlv_channel *chan = reinterpret_cast<tap_tlv_channel*>(d_msg + offset);
+				chan->type = 3; // CHANNEL_ASSIGNMENT
+				chan->length = 3;
+				chan->channel_number = (uint16_t)pmt::to_long(s);
+				chan->channel_page = 0;
+				chan->padding = 0;
+				offset += sizeof(tap_tlv_channel);
+				extra_size += sizeof(tap_tlv_channel);
+			}
+		}
+
+		tap->length = extra_size;
+		hdr->incl_len = len + extra_size;
+		hdr->orig_len = len + extra_size;
+		break;
+	}
+
 	}
 
 	memcpy(d_msg + offset, buf, len);

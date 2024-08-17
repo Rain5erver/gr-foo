@@ -9,8 +9,8 @@ parameters:
     label: Technology
     dtype: enum
     default: '127'
-    options: ['127', '195']
-    option_labels: [WiFi, ZigBee]
+    options: ['127', '195', '283']
+    option_labels: [WiFi, ZigBee, ZigBeeTap]
 -   id: debug
     label: Debug
     dtype: bool
