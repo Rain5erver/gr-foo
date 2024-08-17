@@ -104,6 +104,15 @@ namespace foo {
 	};
 	#pragma pack(pop)
 
+	#pragma pack(push, 1)
+	struct tap_tlv_lqi {
+		uint16_t type; // LQI_TYPE = 10
+		uint16_t length; // 1
+		uint8_t lqi;
+		uint8_t padding[3]; // Should be 0 padded
+	};
+	#pragma pack(pop)
+
 }  // namespace foo
 }  // namespace gr
 

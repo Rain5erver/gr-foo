@@ -148,7 +148,7 @@ wireshark_connector_impl::handle_pdu(pmt::pmt_t pdu) {
 
 	case ZIGBEE_TAP:{
 
-		const size_t max_extra_size = sizeof(tap_hdr) + sizeof(tap_tlv_fcs) + sizeof(tap_tlv_channel);
+		const size_t max_extra_size = sizeof(tap_hdr) + sizeof(tap_tlv_fcs) + sizeof(tap_tlv_channel) + sizeof(tap_tlv_lqi);
 		size_t extra_size = sizeof(tap_hdr) + sizeof(tap_tlv_fcs);
 		d_msg = reinterpret_cast<char*>(std::malloc(len + sizeof(pcap_hdr) + max_extra_size));
 
@@ -175,7 +175,6 @@ wireshark_connector_impl::handle_pdu(pmt::pmt_t pdu) {
 		}
 		offset += sizeof(tap_tlv_fcs);
 
-
 		pmt::pmt_t dict = pmt::car(pdu);
 		if(pmt::dict_has_key(dict, pmt::mp("channel"))) {
 			pmt::pmt_t s = pmt::dict_ref(dict, pmt::mp("channel"), pmt::PMT_NIL);
@@ -188,6 +187,21 @@ wireshark_connector_impl::handle_pdu(pmt::pmt_t pdu) {
 				chan->padding = 0;
 				offset += sizeof(tap_tlv_channel);
 				extra_size += sizeof(tap_tlv_channel);
+			}
+		}
+
+		if(pmt::dict_has_key(dict, pmt::mp("lqi"))) {
+			pmt::pmt_t s = pmt::dict_ref(dict, pmt::mp("lqi"), pmt::PMT_NIL);
+			if(pmt::is_integer(s)) {
+				tap_tlv_lqi *lqi = reinterpret_cast<tap_tlv_lqi*>(d_msg + offset);
+				lqi->type = 10; // LQI
+				lqi->length = 1;
+				lqi->lqi = (uint8_t)pmt::to_long(s);
+				for (int i = 0; i < 3; i++) {
+					lqi->padding[i] = 0;
+				}
+				offset += sizeof(tap_tlv_lqi);
+				extra_size += sizeof(tap_tlv_lqi);
 			}
 		}
 
